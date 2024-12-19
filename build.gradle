@@ -1,0 +1,61 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.4.0'
+    id 'io.spring.dependency-management' version '1.1.6'
+}
+
+group = 'com.doogsiesugurd'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(23)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.session:spring-session-core'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// Custom tasks to build React project and copy to static resources
+def isWindows = System.getProperty('os.name').toLowerCase().contains('win')
+def isMac = System.getProperty('os.name').toLowerCase().contains('mac')
+def isLinux = System.getProperty('os.name').toLowerCase().contains('nix') || System.getProperty('os.name').toLowerCase().contains('nux')
+
+tasks.register('buildFrontend', Exec) {
+    workingDir 'frontend'
+    if (isWindows) {
+        commandLine 'cmd', '/c', 'npm install && npm run build'
+    } else if (isMac || isLinux) {
+        commandLine 'sh', '-c', 'npm install && npm run build'
+    }
+    inputs.dir 'frontend/src'
+    outputs.dir 'frontend/build'
+}
+
+tasks.register('copyFrontend', Copy) {
+    dependsOn buildFrontend
+    from 'frontend/build'
+    into 'src/main/resources/static'
+    inputs.dir 'frontend/build'
+    outputs.dir 'src/main/resources/static'
+}
+
+processResources {
+    dependsOn copyFrontend
+}
